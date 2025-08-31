@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Flappy Dabloons</title>
+  <style>
+    body { margin:0; background:#87CEEB; overflow:hidden; }
+    canvas { display:block; margin:0 auto; background:#87CEEB; }
+    #playBtn, #restartBtn, #shopBtn {
+      position:absolute;
+      left:50%; transform:translateX(-50%);
+      padding:10px 20px;
+      font-family:Arial Black, sans-serif;
+      font-size:20px; cursor:pointer;
+      border:2px solid black; border-radius:5px;
+    }
+    #playBtn { bottom:80px; background:yellow; display:none; }
+    #restartBtn { bottom:140px; background:red; display:none; }
+    #shopBtn { bottom:80px; background:orange; display:none; }
+    #title, #studio {
+      position:absolute; width:100%; text-align:center;
+      font-family:Arial Black, sans-serif;
+      font-size:48px; color:white; text-shadow:2px 2px black;
+      top:30%; display:none;
+    }
+    #studio { font-size:32px; top:20%; }
+    #memeMsg {
+      position:absolute; bottom:10%; left:50%;
+      transform:translateX(-50%);
+      font-size:22px; font-family:Impact, sans-serif;
+      color:yellow; text-shadow:2px 2px 2px black;
+      display:none;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas" width="400" height="600"></canvas>
+  <div id="studio">GAMERABLE STUDIO PRESENTS</div>
+  <div id="title">FLAPPY DABLOONS</div>
+  <button id="playBtn">Play</button>
+  <button id="restartBtn">Restart</button>
+  <button id="shopBtn">Shop</button>
+  <div id="memeMsg"></div>
+  
+<script>
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+
+let bird, pipes, score, dabloons=0, highScore=0, gameState="intro";
+
+const gravity = 0.25;    // lowered for natural feel
+const jump = -5;
+const pipeGap = 180;     // bigger gap
+const pipeWidth = 60;
+const pipeSpeed = 2;
+
+function resetGame() {
+  bird = { x:60, y:canvas.height/2, w:20, h:20, vy:0 };
+  pipes = [];
+  score = 0;
+}
+
+function showIntro() {
+  gameState="intro";
+  document.getElementById("studio").style.display="block";
+  document.getElementById("title").style.display="none";
+  document.getElementById("playBtn").style.display="none";
+  document.getElementById("restartBtn").style.display="none";
+  document.getElementById("shopBtn").style.display="none";
+  setTimeout(()=> {
+    document.getElementById("studio").style.display="none";
+    document.getElementById("title").style.display="block";
+    setTimeout(()=> {
+      document.getElementById("playBtn").style.display="block";
+    }, 1000);
+  }, 1500);
+}
+
+function startGame() {
+  resetGame();
+  gameState="play";
+  document.getElementById("playBtn").style.display="none";
+  document.getElementById("title").style.display="none";
+}
+
+function gameOver() {
+  gameState="over";
+  highScore = Math.max(highScore, score);
+  document.getElementById("restartBtn").style.display="block";
+  document.getElementById("shopBtn").style.display="block";
+}
+
+function drawBird() {
+  ctx.fillStyle="yellow";
+  ctx.fillRect(bird.x, bird.y, bird.w, bird.h);
+}
+
+function drawPipes() {
+  ctx.fillStyle="green";
+  pipes.forEach(p=>{
+    ctx.fillRect(p.x,0,pipeWidth,p.top);
+    ctx.fillRect(p.x,p.bottom,pipeWidth,canvas.height-p.bottom);
+  });
+}
+
+function drawHUD() {
+  ctx.fillStyle="white";
+  ctx.font="20px Arial Black";
+  ctx.fillText("Score: "+score, 10, 25);
+  ctx.fillText("High: "+highScore, 10, 50);
+}
+
+function update() {
+  if (gameState==="play") {
+    bird.vy += gravity;
+    bird.y += bird.vy;
+    if (bird.y+bird.h>canvas.height) gameOver();
+    if (bird.y<0) bird.y=0;
+
+    // pipes
+    if (pipes.length===0 || pipes[pipes.length-1].x < canvas.width-200) {
+      let topH = Math.random()*200+50;
+      pipes.push({ x:canvas.width, top:topH, bottom:topH+pipeGap });
+    }
+    pipes.forEach(p=>p.x -= pipeSpeed);
+    if (pipes[0] && pipes[0].x+pipeWidth<0) pipes.shift();
+
+    // collision + scoring
+    pipes.forEach(p=>{
+      if (bird.x < p.x+pipeWidth && bird.x+bird.w > p.x &&
+         (bird.y < p.top || bird.y+bird.h > p.bottom)) {
+        gameOver();
+      }
+      if (!p.passed && p.x+pipeWidth<bird.x) {
+        score++;
+        dabloons += 5;
+        p.passed=true;
+      }
+    });
+  }
+}
+
+function loop() {
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  if (gameState==="play") {
+    drawBird();
+    drawPipes();
+    drawHUD();
+  }
+  requestAnimationFrame(loop);
+}
+
+document.addEventListener("keydown", ()=> {
+  if (gameState==="play") bird.vy=jump;
+});
+canvas.addEventListener("click", ()=> {
+  if (gameState==="play") bird.vy=jump;
+});
+
+document.getElementById("playBtn").onclick = startGame;
+document.getElementById("restartBtn").onclick = ()=>{
+  document.getElementById("restartBtn").style.display="none";
+  document.getElementById("shopBtn").style.display="none";
+  startGame();
+};
+document.getElementById("shopBtn").onclick = ()=>{
+  document.getElementById("memeMsg").style.display="block";
+  const memes=[
+    "You’re too broke 💀",
+    "Skill issue detected.",
+    "No dabloons, no drip.",
+    "Imagine being this poor 🤡",
+    "Come back with some REAL dabloons!"
+  ];
+  document.getElementById("memeMsg").innerText=memes[Math.floor(Math.random()*memes.length)];
+  setTimeout(()=>{document.getElementById("memeMsg").style.display="none";},2000);
+};
+
+showIntro();
+loop();
+</script>
+</body>
+</html>

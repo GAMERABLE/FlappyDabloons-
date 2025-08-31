@@ -1,0 +1,221 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Flappy Dabloons</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: Arial Black, sans-serif;
+      background: #87CEEB;
+    }
+    canvas {
+      display: block;
+    }
+    #intro, #gameOverScreen, #shop {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      background: #87CEEB;
+      z-index: 10;
+    }
+    #gameOverScreen, #shop {
+      display: none;
+    }
+    button {
+      padding: 12px 24px;
+      margin: 10px;
+      font-size: 20px;
+      font-weight: bold;
+      cursor: pointer;
+      border: none;
+      border-radius: 8px;
+    }
+    #memeText {
+      color: red;
+      font-size: 18px;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div id="intro">
+    <h1 id="studio" style="font-size:40px; opacity:1;">GAMERABLE Studio Presents</h1>
+    <h1 id="title" style="font-size:50px; opacity:0;">Flappy Dabloons</h1>
+    <button id="playBtn" style="display:none;">Play</button>
+  </div>
+
+  <canvas id="gameCanvas"></canvas>
+
+  <div id="gameOverScreen">
+    <h1>Game Over</h1>
+    <p id="scoreDisplay"></p>
+    <p id="highScoreDisplay"></p>
+    <button id="restartBtn">Restart</button>
+    <button id="shopBtn">Shop</button>
+  </div>
+
+  <div id="shop">
+    <h1>Shop</h1>
+    <p id="dabloonsDisplay">Dabloons: 0</p>
+    <button id="buyHatBtn">Buy Fancy Hat (50)</button>
+    <p id="memeText"></p>
+    <button id="backBtn">Back</button>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    let bird, gravity, velocity, lift, pipes, score, dabloons, highScore, gameLoop, gameRunning;
+
+    function resetGame() {
+      bird = { x: 60, y: canvas.height / 2, radius: 20 };
+      gravity = 0.4;
+      velocity = 0;
+      lift = -8;
+      pipes = [];
+      score = 0;
+      gameRunning = true;
+      if (gameLoop) clearInterval(gameLoop);
+      gameLoop = setInterval(update, 1000 / 60);
+    }
+
+    function update() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Bird
+      velocity += gravity;
+      bird.y += velocity;
+      ctx.fillStyle = "yellow";
+      ctx.beginPath();
+      ctx.arc(bird.x, bird.y, bird.radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Boundaries
+      if (bird.y + bird.radius > canvas.height || bird.y - bird.radius < 0) {
+        endGame();
+      }
+
+      // Pipes
+      if (pipes.length === 0 || pipes[pipes.length - 1].x < canvas.width - 300) {
+        let gap = 180;
+        let topHeight = Math.random() * (canvas.height - gap - 100) + 50;
+        pipes.push({ x: canvas.width, top: topHeight, bottom: topHeight + gap });
+      }
+
+      for (let i = pipes.length - 1; i >= 0; i--) {
+        let pipe = pipes[i];
+        pipe.x -= 3;
+
+        ctx.fillStyle = "green";
+        ctx.fillRect(pipe.x, 0, 60, pipe.top);
+        ctx.fillRect(pipe.x, pipe.bottom, 60, canvas.height - pipe.bottom);
+
+        if (
+          bird.x + bird.radius > pipe.x &&
+          bird.x - bird.radius < pipe.x + 60 &&
+          (bird.y - bird.radius < pipe.top || bird.y + bird.radius > pipe.bottom)
+        ) {
+          endGame();
+        }
+
+        if (pipe.x + 60 < bird.x && !pipe.passed) {
+          score++;
+          dabloons += 5;
+          pipe.passed = true;
+        }
+
+        if (pipe.x + 60 < 0) {
+          pipes.splice(i, 1);
+        }
+      }
+
+      // Score display
+      ctx.fillStyle = "black";
+      ctx.font = "24px Arial Black";
+      ctx.fillText("Score: " + score, 20, 40);
+      ctx.fillText("High Score: " + highScore, 20, 70);
+    }
+
+    function endGame() {
+      gameRunning = false;
+      clearInterval(gameLoop);
+      document.getElementById("gameOverScreen").style.display = "flex";
+      document.getElementById("scoreDisplay").innerText = "Score: " + score;
+      if (score > highScore) highScore = score;
+      document.getElementById("highScoreDisplay").innerText = "High Score: " + highScore;
+    }
+
+    function flap() {
+      if (gameRunning) velocity = lift;
+    }
+
+    document.addEventListener("keydown", flap);
+    document.addEventListener("touchstart", flap);
+
+    // Shop system
+    document.getElementById("buyHatBtn").onclick = () => {
+      if (dabloons >= 50) {
+        dabloons -= 50;
+        document.getElementById("memeText").innerText = "You bought a silly hat!";
+      } else {
+        const memes = [
+          "Bro is broke 💀",
+          "Skill issue, no dabloons",
+          "Go touch some pipes",
+          "You thought you had enough? Wrong."
+        ];
+        document.getElementById("memeText").innerText = memes[Math.floor(Math.random() * memes.length)];
+      }
+      document.getElementById("dabloonsDisplay").innerText = "Dabloons: " + dabloons;
+    };
+
+    document.getElementById("backBtn").onclick = () => {
+      document.getElementById("shop").style.display = "none";
+      document.getElementById("gameOverScreen").style.display = "flex";
+    };
+
+    document.getElementById("restartBtn").onclick = () => {
+      document.getElementById("gameOverScreen").style.display = "none";
+      resetGame();
+    };
+
+    document.getElementById("shopBtn").onclick = () => {
+      document.getElementById("gameOverScreen").style.display = "none";
+      document.getElementById("shop").style.display = "flex";
+      document.getElementById("dabloonsDisplay").innerText = "Dabloons: " + dabloons;
+    };
+
+    // Intro sequence
+    function runIntro() {
+      setTimeout(() => {
+        document.getElementById("studio").style.opacity = 0;
+        document.getElementById("title").style.opacity = 1;
+        setTimeout(() => {
+          document.getElementById("playBtn").style.display = "block";
+        }, 1000);
+      }, 2000);
+    }
+
+    document.getElementById("playBtn").onclick = () => {
+      document.getElementById("intro").style.display = "none";
+      resetGame();
+    };
+
+    // Start
+    dabloons = 0;
+    highScore = 0;
+    runIntro();
+  </script>
+</body>
+</html>
